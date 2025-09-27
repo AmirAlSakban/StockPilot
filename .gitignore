@@ -101,3 +101,20 @@ keystore.properties
 # Temporary files
 *.tmp
 *.temp
+
+# Flutter tooling additional (safety)
+analysis_options.yaml.generated
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+
+# macOS platform (if later added)
+macos/Flutter/ephemeral/
+
+# Windows platform (if generated)
+windows/Runner/Runner.vcxproj.user
+windows/Flutter/ephemeral/
+
+# Rename artifacts / backup (sanity)
+*.orig
+*.rej
+*.backup

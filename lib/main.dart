@@ -1,64 +1,51 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_item_manager/add_item_widget.dart';
-import 'dart:async';
-import 'package:flutter_item_manager/models/item.dart';
-import 'package:flutter_item_manager/services/api_service.dart';
-import 'package:flutter_item_manager/widgets/item_list.dart';
+import 'package:stock_pilot/services/api_service.dart';
+import 'package:stock_pilot/models/item.dart';
+import 'package:stock_pilot/add_item_widget.dart';
+import 'package:stock_pilot/widgets/item_list.dart';
 
-void main() {
-  runApp(MyApp());
-}
+void main() => runApp(StockPilotApp());
 
-class MyApp extends StatelessWidget {
+class StockPilotApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Item Management',
-      debugShowCheckedModeBanner: false,
+      title: 'StockPilot',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        scaffoldBackgroundColor: Colors.grey[100],
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        useMaterial3: true,
       ),
-      home: ItemsListScreen(),
+      home: InventoryHomePage(),
     );
   }
 }
 
-class ItemsListScreen extends StatefulWidget {
+class InventoryHomePage extends StatefulWidget {
   @override
-  _ItemsListScreenState createState() => _ItemsListScreenState();
+  State<InventoryHomePage> createState() => _InventoryHomePageState();
 }
 
-class _ItemsListScreenState extends State<ItemsListScreen> {
-  final ApiService api = ApiService();
-  List<Item> itemsList = [];
-  bool isLoading = true;
+class _InventoryHomePageState extends State<InventoryHomePage> {
+  final ApiService _api = ApiService();
+  List<Item> _items = [];
+  bool _loading = true;
+  String _error;
 
   @override
   void initState() {
     super.initState();
-    _fetchItems();
+    _fetch();
   }
 
-  _fetchItems() async {
-    setState(() {
-      isLoading = true;
-    });
-
+  Future<void> _fetch() async {
+    setState(() { _loading = true; _error = null; });
     try {
-      final items = await api.getItems();
-      setState(() {
-        itemsList = items;
-        isLoading = false;
-      });
-    } catch (error) {
-      setState(() {
-        isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${error.toString()}')),
-      );
+      final data = await _api.getItems();
+      setState(() { _items = data; });
+    } catch (e) {
+      setState(() { _error = e.toString(); });
+    } finally {
+      if (mounted) setState(() { _loading = false; });
     }
   }
 
@@ -66,36 +53,61 @@ class _ItemsListScreenState extends State<ItemsListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Items Management'),
+        title: Text('Inventory'),
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
-            onPressed: _fetchItems,
-          ),
+            tooltip: 'Refresh',
+            onPressed: _fetch,
+          )
         ],
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : itemsList.isEmpty
-              ? Center(
-                  child: Text(
-                    'No items found',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                )
-              : ItemList(items: itemsList),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+      body: AnimatedSwitcher(
+        duration: Duration(milliseconds: 300),
+        child: _loading
+            ? Center(child: CircularProgressIndicator())
+            : _error != null
+                ? _ErrorState(message: _error, onRetry: _fetch)
+                : ItemList(items: _items, onRefresh: _fetch),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => AddItemWidget()),
-          ).then((value) {
-            _fetchItems();
-          });
+            MaterialPageRoute(builder: (_) => AddItemWidget()),
+          );
+          _fetch();
         },
-        tooltip: 'Add Item',
-        child: Icon(Icons.add),
+        icon: Icon(Icons.add),
+        label: Text('Add Item'),
       ),
     );
   }
 }
+
+class _ErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorState({this.message, this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+            children: [
+          Icon(Icons.warning_amber_rounded, size: 48, color: Colors.amber),
+          SizedBox(height: 12),
+          Text('Something went wrong', style: Theme.of(context).textTheme.titleMedium),
+          SizedBox(height: 8),
+          Text(message ?? 'Unknown error', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[700])),
+          SizedBox(height: 16),
+          ElevatedButton.icon(onPressed: onRetry, icon: Icon(Icons.refresh), label: Text('Retry'))
+        ])
+      ),
+    );
+  }
+}
+

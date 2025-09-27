@@ -1,106 +1,60 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:stock_pilot/models/item.dart';
 
-import 'package:flutter_restapi/models/item.dart';
-import 'package:http/http.dart';
-
+/// ApiService encapsulates RESTful CRUD operations for inventory Items.
+/// Replace [baseUrl] with your actual backend endpoint. The service is kept
+/// intentionally minimal; in a production app consider adding interceptors,
+/// auth token handling, logging and error abstractions.
 class ApiService {
-  // Using JSONPlaceholder API as a demo REST endpoint
-  final String apiUrl = "https://jsonplaceholder.typicode.com/posts";
+  final String baseUrl = "http://localhost:3000/api/items"; // TODO: configure
 
   Future<List<Item>> getItems() async {
-    Response res = await get(apiUrl);
-
-    if (res.statusCode == 200) {
-      List<dynamic> body = jsonDecode(res.body);
-      // Convert the posts from JSONPlaceholder to our Item model
-      List<Item> items = body.map((dynamic item) => Item(
-        id: item['id'].toString(),
-        name: "Item ${item['id']}",
-        description: item['title'],
-        price: 19.99,
-        category: "Category ${item['id'] % 5 + 1}",
-        quantity: item['id'] % 20 + 1,
-        imageUrl: "https://via.placeholder.com/150",
-        createdAt: DateTime.now().toString(),
-        updatedAt: DateTime.now().toString(),
-      )).toList();
-      return items;
-    } else {
-      throw "Failed to load items list";
-    }
+    final res = await http.get(Uri.parse(baseUrl));
+    _ensureSuccess(res, 'fetch items');
+    final List<dynamic> body = jsonDecode(res.body) as List<dynamic>;
+    return body.map((e) => Item.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<Item> getItemById(String id) async {
-    final response = await get('$apiUrl/$id');
-
-    if (response.statusCode == 200) {
-      var data = json.decode(response.body);
-      return Item(
-        id: data['id'].toString(),
-        name: "Item ${data['id']}",
-        description: data['title'],
-        price: 19.99,
-        category: "Category ${data['id'] % 5 + 1}",
-        quantity: data['id'] % 20 + 1,
-        imageUrl: "https://via.placeholder.com/150",
-        createdAt: DateTime.now().toString(),
-        updatedAt: DateTime.now().toString(),
-      );
-    } else {
-      throw Exception('Failed to load an item');
-    }
+    final res = await http.get(Uri.parse('$baseUrl/$id'));
+    _ensureSuccess(res, 'fetch item');
+    return Item.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   Future<Item> createItem(Item item) async {
-    Map<String, String> headers = {"Content-Type": "application/json"};
-
-    final Response response = await post(
-      apiUrl,
-      headers: headers,
-      body: json.encode(item.toJson()),
+    final res = await http.post(
+      Uri.parse(baseUrl),
+      headers: _jsonHeaders,
+      body: jsonEncode(item.toJson()),
     );
-    
-    if (response.statusCode == 201) {
-      var data = json.decode(response.body);
-      return Item(
-        id: data['id'].toString(),
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        category: item.category,
-        quantity: item.quantity,
-        imageUrl: item.imageUrl,
-        createdAt: DateTime.now().toString(),
-        updatedAt: DateTime.now().toString(),
-      );
-    } else {
-      throw Exception('Failed to create item');
-    }
+    _ensureSuccess(res, 'create item');
+    return Item.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   Future<Item> updateItem(String id, Item item) async {
-    Map<String, String> headers = {"Content-Type": "application/json"};
-
-    final Response response = await put(
-      '$apiUrl/$id',
-      headers: headers,
-      body: json.encode(item.toJson()),
+    final res = await http.put(
+      Uri.parse('$baseUrl/$id'),
+      headers: _jsonHeaders,
+      body: jsonEncode(item.toJson()),
     );
-    
-    if (response.statusCode == 200) {
-      return item;
-    } else {
-      throw Exception('Failed to update an item');
-    }
+    _ensureSuccess(res, 'update item');
+    return Item.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   Future<void> deleteItem(String id) async {
-    Response res = await delete('$apiUrl/$id');
+    final res = await http.delete(Uri.parse('$baseUrl/$id'));
+    _ensureSuccess(res, 'delete item');
+  }
 
-    if (res.statusCode == 200) {
-      print("Item deleted");
-    } else {
-      throw "Failed to delete item.";
+  Map<String, String> get _jsonHeaders => const {
+        'Content-Type': 'application/json; charset=UTF-8',
+      };
+
+  void _ensureSuccess(http.Response res, String action) {
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Failed to $action (HTTP ${res.statusCode}): ${res.body}');
     }
   }
 }
+

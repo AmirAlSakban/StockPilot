@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_item_manager/models/item.dart';
-import 'package:flutter_item_manager/services/api_service.dart';
-import 'package:flutter_item_manager/edit_item_widget.dart';
+import 'package:stock_pilot/models/item.dart';
+import 'package:stock_pilot/services/api_service.dart';
+import 'package:stock_pilot/edit_item_widget.dart';
 
 class ItemDetailWidget extends StatefulWidget {
   final Item item;

@@ -1,94 +1,55 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_item_manager/models/item.dart';
-import 'package:flutter_item_manager/item_detail_widget.dart';
+import 'package:stock_pilot/models/item.dart';
+import 'package:stock_pilot/item_detail_widget.dart';
 
 class ItemList extends StatelessWidget {
-  final List<Item> items;
-  
-  ItemList({Key key, this.items}) : super(key: key);
+	final List<Item> items;
+	final void Function() onRefresh;
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: items == null ? 0 : items.length,
-      itemBuilder: (BuildContext context, int index) {
-        return Card(
-          elevation: 2,
-          margin: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ItemDetailWidget(items[index]),
-                ),
-              );
-            },
-            child: Container(
-              padding: EdgeInsets.all(8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Item image
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: NetworkImage(items[index].imageUrl),
-                        fit: BoxFit.cover,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  // Item details
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          items[index].name,
-                          style: TextStyle(
-                            fontSize: 16, 
-                            fontWeight: FontWeight.bold
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          items[index].description,
-                          style: TextStyle(fontSize: 14),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              "\$${items[index].price.toStringAsFixed(2)}",
-                              style: TextStyle(
-                                fontSize: 14, 
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green[700]
-                              ),
-                            ),
-                            Text(
-                              "Qty: ${items[index].quantity}",
-                              style: TextStyle(fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
+	ItemList({@required this.items, this.onRefresh});
+
+	@override
+	Widget build(BuildContext context) {
+		if (items == null || items.isEmpty) {
+			return Center(
+				child: Text(
+					'No items yet. Tap + to add your first one.',
+					style: Theme.of(context).textTheme.bodyMedium,
+				),
+			);
+		}
+		return RefreshIndicator(
+			onRefresh: () async { if (onRefresh != null) onRefresh(); },
+			child: ListView.separated(
+				physics: const AlwaysScrollableScrollPhysics(),
+				itemCount: items.length,
+				separatorBuilder: (_, __) => Divider(height: 0),
+				itemBuilder: (context, index) {
+					final item = items[index];
+					return ListTile(
+						leading: Hero(
+							tag: 'item-image-${item.id ?? index}',
+							child: CircleAvatar(
+								backgroundImage: NetworkImage(item.imageUrl),
+								backgroundColor: Colors.grey.shade200,
+							),
+						),
+						title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+						subtitle: Text('${item.category} • Qty ${item.quantity}'),
+						trailing: Text(
+							'\$${item.price.toStringAsFixed(2)}',
+							style: TextStyle(fontWeight: FontWeight.bold),
+						),
+						onTap: () {
+							Navigator.push(
+								context,
+								MaterialPageRoute(builder: (_) => ItemDetailWidget(item)),
+							);
+						},
+					);
+				},
+			),
+		);
+	}
 }
+

@@ -1,5 +1,5 @@
-name: flutter_item_manager
-description: A Flutter application for managing items via REST API.
+name: stock_pilot
+description: Production-ready Flutter inventory management demo showcasing clean architecture, RESTful CRUD, form validation, and testable UI components.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
